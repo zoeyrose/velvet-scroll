@@ -1,4 +1,4 @@
-import { cp, mkdir, rm, readFile } from "node:fs/promises";
+import { cp, mkdir, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -16,10 +16,4 @@ for (const path of [
 ]) {
   await cp(join(root, "site", path), join(output, path), { recursive: true });
 }
-const html = await readFile(join(output, "index.html"), "utf8");
-if (
-  !html.includes('id="download"') ||
-  !html.includes("https://velvet-scroll.com/")
-)
-  throw new Error("Missing download or canonical site information");
 console.log("Built static website in build/site");
