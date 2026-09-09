@@ -1,0 +1,36 @@
+name: Website checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Website checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test deployment authorization and static artifact handling
+        run: npm --prefix site-ci test
+      - name: Build static website
+        run: npm run site:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: website-static-${{ github.run_attempt }}
+          path: build/site/
+          if-no-files-found: error
+          retention-days: 7

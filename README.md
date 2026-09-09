@@ -145,6 +145,11 @@ software glide, not a physical free-spinning wheel.
 See [installation and troubleshooting](docs/installation.md) and the
 [validation checklist](docs/validation.md).
 
+## Website
+
+The project site lives in `site/`, with Cloudflare deployment and authorized PR
+previews. See [website development and deployment](docs/website.md).
+
 ## Development
 
 ```sh
