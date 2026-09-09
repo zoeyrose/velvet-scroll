@@ -1,4 +1,4 @@
-import {readFileSync, readdirSync, writeFileSync, lstatSync} from 'node:fs';
+import {readFileSync, readdirSync, writeFileSync, openSync, fstatSync, closeSync, constants} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {join, resolve} from 'node:path';
@@ -11,8 +11,13 @@ const runGitHub = (args) => execFileSync('gh', args, {
 });
 
 function regularFile(path) {
-  if (!lstatSync(path).isFile()) throw new Error(`Expected a regular file: ${path}`);
-  return readFileSync(path);
+  const descriptor = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    if (!fstatSync(descriptor).isFile()) throw new Error(`Expected a regular file: ${path}`);
+    return readFileSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 export function verifyArtifacts(plan, directory) {

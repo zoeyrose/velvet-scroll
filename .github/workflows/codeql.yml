@@ -34,7 +34,9 @@ jobs:
           persist-credentials: false
       - name: Install Rust for CodeQL extraction
         if: matrix.language == 'rust'
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0 # pinned action implementation
+        with:
+          toolchain: stable
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
