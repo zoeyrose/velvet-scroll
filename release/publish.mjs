@@ -87,10 +87,11 @@ export function publishRelease({cwd = process.cwd(), env = process.env, runGh = 
   const notesPath = join(cwd, 'release-notes.md');
   writeFileSync(notesPath, typeof plan.notes === 'string' ? plan.notes : `Velvet Scroll ${plan.version}\n`);
   const gh = (...args) => runGh(args);
-  const api = (path, {optional = false, method, fields = {}} = {}) => {
+  const api = (path, {optional = false, method, fields = {}, typedFields = {}} = {}) => {
     const args = ['api', path];
     if (method) args.push('--method', method);
     for (const [key, value] of Object.entries(fields)) args.push('-f', `${key}=${value}`);
+    for (const [key, value] of Object.entries(typedFields)) args.push('-F', `${key}=${value}`);
     try { return JSON.parse(gh(...args)); }
     catch (error) {
       if (optional && /\bHTTP 404\b/.test(String(error.stderr ?? ''))) return null;
@@ -127,12 +128,26 @@ export function publishRelease({cwd = process.cwd(), env = process.env, runGh = 
     verifyTag(api(tagPath));
   }
   const releasePath = `${prefix}/releases/tags/${plan.gitTag}`;
-  const checkRelease = (release) => {
+  const checkRelease = (release, expectedId) => {
     if (!release || release.tag_name !== plan.gitTag || !Number.isSafeInteger(release.id)
+      || (expectedId !== undefined && release.id !== expectedId)
       || typeof release.draft !== 'boolean' || release.prerelease !== false) {
       throw new Error('Invalid stable GitHub release response');
     }
     return release;
+  };
+  const findRelease = () => {
+    const release = api(releasePath, {optional: true});
+    if (release) return checkRelease(release);
+    // The tag endpoint can return 404 for drafts. The authenticated listing
+    // includes them, even when the draft is beyond the first page of releases.
+    const pages = JSON.parse(gh('api', `${prefix}/releases`, '--paginate', '--slurp'));
+    if (!Array.isArray(pages) || pages.some((page) => !Array.isArray(page))) {
+      throw new Error('Invalid GitHub release listing');
+    }
+    const matches = pages.flat().filter((item) => item?.tag_name === plan.gitTag);
+    if (matches.length > 1) throw new Error('Multiple GitHub releases match the planned tag');
+    return matches.length ? checkRelease(matches[0]) : null;
   };
   const verifyRemoteAssets = (release) => {
     const pages = JSON.parse(gh('api', `${prefix}/releases/${release.id}/assets`, '--paginate', '--slurp'));
@@ -157,22 +172,27 @@ export function publishRelease({cwd = process.cwd(), env = process.env, runGh = 
       if (digest !== expected.sha256) throw new Error(`Published artifact checksum mismatch: ${expected.name}`);
     }
   };
-  let release = api(releasePath, {optional: true});
-  if (release) checkRelease(release);
+  let release = findRelease();
   if (release && !release.draft) {
     verifyRemoteAssets(release);
     verifyTag(api(tagPath));
     return {published: false, reused: true, url: `https://github.com/${repository}/releases/tag/${plan.gitTag}`};
   }
   if (!release) {
-    gh('release', 'create', plan.gitTag, '--repo', repository, '--verify-tag', '--draft',
-      '--title', `Velvet Scroll ${plan.version}`, '--notes-file', notesPath);
-    release = checkRelease(api(releasePath));
-    if (!release.draft) throw new Error('Release became public before asset upload');
+    release = checkRelease(api(`${prefix}/releases`, {
+      method: 'POST',
+      fields: {tag_name: plan.gitTag, target_commitish: plan.gitHead,
+        name: `Velvet Scroll ${plan.version}`, body: readFileSync(notesPath, 'utf8')},
+      typedFields: {draft: true, prerelease: false},
+    }));
   }
+  const releaseId = release.id;
+  const refreshRelease = () => checkRelease(api(`${prefix}/releases/${releaseId}`), releaseId);
+  release = refreshRelease();
+  if (!release.draft) throw new Error('Release became public before asset upload');
   gh('release', 'upload', plan.gitTag, '--repo', repository, '--clobber',
     ...artifacts.map(({name}) => join(directory, name)));
-  release = checkRelease(api(releasePath));
+  release = refreshRelease();
   verifyRemoteAssets(release);
   verifyTag(api(tagPath));
   if (!release.draft) return {published: false, reused: true, url: `https://github.com/${repository}/releases/tag/${plan.gitTag}`};
@@ -186,7 +206,7 @@ export function publishRelease({cwd = process.cwd(), env = process.env, runGh = 
     || (typeof latest.tag_name === 'string' && stableVersion.test(latest.tag_name.slice(1))
       && latest.tag_name.startsWith('v') && newer(plan.version, latest.tag_name.slice(1))));
   gh('release', 'edit', plan.gitTag, '--repo', repository, '--draft=false', `--latest=${markLatest}`);
-  const published = checkRelease(api(releasePath));
+  const published = refreshRelease();
   if (published.draft) throw new Error('GitHub release is still a draft after publication');
   return {published: true, reused: false, url: `https://github.com/${repository}/releases/tag/${plan.gitTag}`};
 }
