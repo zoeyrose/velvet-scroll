@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Install GUI runtime
+        run: sudo apt-get update && sudo apt-get install -y python3-pyqt6
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Test Rust
+        run: cargo test --locked --all-targets --all-features
+      - name: Test GUI offscreen
+        env:
+          QT_QPA_PLATFORM: offscreen
+          VELVET_SCROLL_TEST_BIN: ${{ github.workspace }}/target/debug/velvet-scroll
+        run: python3 -m unittest discover -s ui -p 'test_*.py' -v
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.85"
+      - name: Install package tools
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev
+      - name: Build Debian package
+        run: make deb
+      - name: Inspect Debian package
+        run: dpkg-deb --info dist/*.deb && dpkg-deb --contents dist/*.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velvet-scroll-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+      - name: Check ARM64 Linux
+        run: cargo check --locked --target aarch64-unknown-linux-gnu
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - name: Check minimum supported Rust
+        run: cargo check --locked

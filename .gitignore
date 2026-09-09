@@ -1,0 +1,11 @@
+/target/
+/dist/
+/build/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.idea/
+.vscode/
+*~
+

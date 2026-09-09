@@ -1,0 +1,15 @@
+# Preserve effective source DPI/wheel calibration before libinput opens a mirror.
+# A virtual device has no USB parent, so normal hardware-identification rules alone
+# cannot supply the physical mouse's properties. The helper only returns an allowlist.
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{phys}=="velvet-scroll/event*", IMPORT{program}="@BINDIR@/velvet-scroll udev-properties $attr{phys}"
+
+# Grant the active local seat user access to event nodes identified as mice.
+# Some gaming mice expose extra keyboard-like keys on the same event node; the
+# ACL necessarily covers every event reported by that mouse node. Keyboard-only
+# event nodes do not carry ID_INPUT_MOUSE and do not match this rule.
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_MOUSE}=="1", TAG+="uaccess"
+
+# Velvet Scroll emits accelerated wheel events through uinput. Access to this
+# node permits input injection, so this rule intentionally uses seat-scoped
+# uaccess instead of a persistent group or world-writable mode.
+SUBSYSTEM=="misc", KERNEL=="uinput", TAG+="uaccess", OPTIONS+="static_node=uinput"

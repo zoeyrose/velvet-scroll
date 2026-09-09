@@ -1,0 +1,19 @@
+[package]
+name = "velvet-scroll"
+publish = false
+edition = "2021"
+rust-version = "1.85"
+description = "Precise little scrolls, magical big flicks. Linux mouse wheel acceleration."
+license = "MIT"
+repository = "https://github.com/zoeyrose/velvet-scroll"
+
+[dependencies]
+evdev = "0.13.2"
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+lto = "thin"
+strip = true
+codegen-units = 1

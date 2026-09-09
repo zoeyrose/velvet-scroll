@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Velvet Scroll
+GenericName=Mouse wheel acceleration
+Comment=Give your mouse wheel a little magic
+Exec=velvet-scroll gui
+Icon=velvet-scroll
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=mouse;wheel;scroll;acceleration;momentum;
+StartupNotify=true
+StartupWMClass=velvet-scroll

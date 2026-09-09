@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+prefix_dir=$(dirname -- "$script_dir")
+exec python3 "$prefix_dir/libexec/velvet-scroll/velvet_scroll.py" "$@"
+

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Velvet Scroll daemon
+Comment=Start mouse wheel acceleration for this session
+Exec=velvet-scroll daemon
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+

@@ -1,0 +1,12 @@
+Package: velvet-scroll
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: @ARCH@
+Maintainer: Zoey Rose <zoeyrose@users.noreply.github.com>
+Homepage: https://github.com/zoeyrose/velvet-scroll
+Depends: @SHLIBS_DEPENDS@, python3 (>= 3.10), python3-pyqt6
+Description: Linux mouse wheel acceleration
+ Velvet Scroll accelerates mouse wheel scrolling while keeping precise small
+ movements. It includes an unprivileged daemon, command-line controls, and a
+ PyQt6 desktop interface.

@@ -1,0 +1,19 @@
+[Unit]
+Description=Velvet Scroll mouse wheel acceleration
+Documentation=https://github.com/zoeyrose/velvet-scroll
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=@BINDIR@/velvet-scroll daemon
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=graphical-session.target
+
