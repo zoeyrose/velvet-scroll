@@ -282,9 +282,10 @@ em {
 }
 .art-note {
   position: absolute;
-  bottom: -10px;
+  bottom: 8px;
   right: 4px;
-  font: italic 15px var(--serif);
+  font: italic 15px / 1.6 var(--serif);
+  max-width: calc(100% - 16px);
   color: var(--pink);
 }
 .art-note span {
@@ -337,7 +338,8 @@ em {
   border-bottom: 0;
 }
 .feature-mark {
-  font: italic 15px var(--serif);
+  font: italic 15px / 1.6 var(--serif);
+  max-width: calc(100% - 16px);
   color: var(--pink);
   padding-top: 5px;
 }
@@ -659,7 +661,7 @@ footer a {
   }
   .art-note {
     right: 0;
-    bottom: -5px;
+    bottom: 8px;
   }
   .compatibility {
     display: grid;

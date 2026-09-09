@@ -31,5 +31,5 @@
 
 - Website source lives in `site/`; run `npm run site:build` and check desktop and
   mobile layouts. Keep assets local and the GitHub download fallback usable.
-  Read `docs/website.md` before changing deployment. Never run PR code with
-  deployment credentials or trust artifact contents to authorize a preview.
+  Read `docs/website.md` before changing deployment. Cloudflare Pages builds
+  directly from Git; keep its build environments free of application secrets.

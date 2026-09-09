@@ -1,10 +1,9 @@
 # Project website
 
-The site lives in `site/`. It is plain HTML, CSS and a small script for package
-selection. It uses local assets, system fonts and no analytics, cookies or
-framework runtime. The download chooser reads the latest stable GitHub release;
-if the API is unavailable or JavaScript is disabled, the GitHub Releases link
-still works. Installation details stay in the repository documentation.
+The site lives in `site/`: plain HTML, CSS and a small package-selection script.
+It uses local assets and system fonts, with no analytics or framework runtime.
+Downloads use the latest stable GitHub release, with a GitHub Releases fallback
+when JavaScript or the API is unavailable.
 
 ## Local development
 
@@ -13,85 +12,69 @@ npm run site:build
 python3 -m http.server 8080 --directory build/site
 ```
 
-Open `http://localhost:8080`. Rebuild after editing source files. Deployment
-security tests run with `npm --prefix site-ci test`; they do not require any
-Cloudflare credentials.
+Rebuild after editing source files. The build only copies static files; it needs
+Node.js but no npm dependencies. Check mobile and desktop layouts. Security
+headers live in `site/_headers` and are copied into the output for Cloudflare.
+The existing required GitHub CI check also builds the site.
 
-## Cloudflare setup
+## Native Cloudflare Pages integration
 
-The dedicated **velvet-scroll** Pages Direct Upload project uses `main` as its
-production branch and `velvet-scroll.pages.dev` as its default hostname.
-`velvet-scroll.com` is the primary canonical address. Both `.com` and `.org`
-are attached as custom domains.
+Connect `zoeyrose/velvet-scroll` through the **Cloudflare Workers & Pages** GitHub
+App. Grant access to this repository in GitHub Settings → Applications →
+Installed GitHub Apps. Create a Pages project using **Connect to Git**, with:
 
-GitHub Actions uses:
+| Setting | Value |
+| --- | --- |
+| Project name | `velvet-scroll` |
+| Production branch | `main` |
+| Framework preset | None |
+| Root directory | Repository root |
+| Build command | `node scripts/build-site.mjs` |
+| Build output directory | `build/site` |
+| Environment variable, production and preview | `NODE_VERSION=24` |
+| Environment variable, production and preview | `SKIP_DEPENDENCY_INSTALL=true` |
+| Preview branches | All non-production branches |
+| PR comments | Enabled |
 
-| Setting | Location | Purpose |
-| --- | --- | --- |
-| `CLOUDFLARE_ACCOUNT_ID` | Repository Actions variable | The account containing the Pages project |
-| `CLOUDFLARE_API_TOKEN` | Repository Actions secret | Dedicated token with Account → Cloudflare Pages → Edit, scoped to that account |
+Cloudflare builds and deploys directly from Git. No GitHub Actions deployment
+workflow, Wrangler dependency, Cloudflare API token or account variable is
+needed. Keep Cloudflare build environments free of application secrets.
 
-The account variable is configured. Add the dedicated API token through GitHub's
-repository **Settings → Secrets and variables → Actions**. Do not put it in a
-commit, issue, PR comment or chat. The local Wrangler OAuth session is useful for
-one-time setup, but is not copied into CI.
+Merging a PR into `main` triggers a production deployment. Pushing branches in
+this repository triggers preview deployments, with URLs/checks attached by
+Cloudflare. Native GitHub integration does **not** deploy fork PRs; external
+contributions need maintainer review and a branch in this repository to preview.
+Repository write permission controls who can push these branches. Cloudflare
+builds run independently of GitHub CI; the existing required checks protect
+merges to main.
 
-The current local OAuth login cannot read or edit DNS records. In each domain's
-Cloudflare DNS settings, ensure the apex has a proxied CNAME:
+Preview URLs are public to view and marked `noindex`. To require login, enable
+Cloudflare Access for Pages previews and configure the desired identity allowlist.
+Branch deployment permissions and preview viewing permissions are separate.
+
+The first production build requires the website PR to be merged. Before that,
+the website branch can be built as a preview. Retry failed builds through the
+Cloudflare deployment page. Revert a change through a PR to roll back production.
+
+## Domains
+
+Attach `velvet-scroll.com` and `velvet-scroll.org` in Pages → Custom domains.
+The `.com` address is canonical. In each zone, ensure a proxied apex CNAME:
 
 | Zone | Type | Name | Target |
 | --- | --- | --- | --- |
 | `velvet-scroll.com` | CNAME | `@` | `velvet-scroll.pages.dev` |
 | `velvet-scroll.org` | CNAME | `@` | `velvet-scroll.pages.dev` |
 
-Replace conflicting apex A/AAAA records if present; keep unrelated records such
-as mail records. Cloudflare flattens apex CNAMEs. Check Pages → velvet-scroll →
-Custom domains until both show **Active**.
+Keep unrelated DNS records, including mail records. Check that both custom domains
+show Active. If Cloudflare assigns a different Pages subdomain, use that hostname
+as the CNAME target instead.
 
-To send `.org` visitors to the canonical `.com` address, add a Cloudflare Single
-Redirect in the `.org` zone, matching hostname `velvet-scroll.org`, with a dynamic
-target `concat("https://velvet-scroll.com", http.request.uri.path)`, status 301,
-and **Preserve query string** enabled. Domain redirects are Cloudflare settings,
-not a Pages `_redirects` rule. If the redirect is omitted, both domains serve the
-same site and its canonical link points to `.com`.
+Optionally redirect `.org` to `.com` with a Cloudflare Single Redirect matching
+hostname `velvet-scroll.org`, dynamic target
+`concat("https://velvet-scroll.com", http.request.uri.path)`, status 301, and
+Preserve query string enabled. Without it, both domains serve the same site.
 
-## Production and preview deployments
-
-**Website checks** runs on main pushes and PRs targeting main. It builds static
-files without Cloudflare credentials, tests the deployment tooling, and uploads
-a run-attempt-specific artifact. Main pushes happen when PRs are squash merged.
-
-**Website deploy** runs only after successful Website checks. All privileged
-scripts and the pinned Wrangler dependency come from trusted `main`. It uses
-fresh GitHub API responses to verify the run, artifact digest and source SHA:
-
-- Production must still match main's current HEAD.
-- A preview must belong to an open PR targeting main and match its current HEAD.
-- Both the PR author and the build's triggering actor must currently have write,
-  maintain or admin access to this repository. This also supports authorized
-  contributors working from forks. An untrusted author's PR is not authorized
-  merely because a maintainer reruns its checks.
-- Stale, failed, ambiguous and unauthorized builds do not deploy.
-
-The gate is checked again immediately before deployment. The downloaded artifact
-is size bounded and extracted through a strict static-file allowlist. Symlinks,
-path traversal, Pages Functions, Workers and deployment configuration are
-rejected. Security headers are generated from trusted code. No PR build scripts
-run in the job holding Cloudflare credentials.
-
-Production uses the `main` Pages branch; PRs use `pr-N`. GitHub deployment statuses
-show the exact deployment URL on the PR. Preview URLs are public to view; the
-permission gate controls who can deploy them. Cloudflare marks previews noindex.
-For private viewing, enable Cloudflare Access for the Pages preview hostnames and
-configure an identity allowlist separately; this workflow does not infer who
-should be allowed to sign in.
-
-The deployment workflow must first be merged into main before GitHub will run
-its `workflow_run` trigger. The initial website PR can be reviewed using a
-one-time Pages preview made by the maintainer; subsequent authorized PR previews
-are automatic. No production deployment from an unmerged PR is performed.
-
-For a failed deployment after configuration is corrected, rerun **Website
-deploy** while its source is still current. Otherwise rerun the latest Website
-checks. To roll back production, revert the website change through a PR so the
-build, checks and deployment remain tied to reviewed source.
+References: [GitHub integration](https://developers.cloudflare.com/pages/configuration/git-integration/github-integration/),
+[build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/),
+and [preview deployments](https://developers.cloudflare.com/pages/configuration/preview-deployments/).

@@ -147,8 +147,8 @@ See [installation and troubleshooting](docs/installation.md) and the
 
 ## Website
 
-The project site lives in `site/`, with Cloudflare deployment and authorized PR
-previews. See [website development and deployment](docs/website.md).
+The project site lives in `site/`, with native Cloudflare Pages Git deployment and
+previews for branches in this repository. See [website development and deployment](docs/website.md).
 
 ## Development
 
