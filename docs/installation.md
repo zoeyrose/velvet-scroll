@@ -26,6 +26,27 @@ Use [rustup](https://rustup.rs/) if your distribution does not provide Rust
 source checkout, but a system install should use the distribution package so
 the installed launcher can import it with `/usr/bin/env python3`.
 
+## Download a package
+
+[GitHub Releases](https://github.com/zoeyrose/velvet-scroll/releases) provides
+Debian, RPM, Arch and tar packages for x86_64 and aarch64. Choose your architecture
+and install the downloaded native package with your distro's package manager:
+
+```sh
+sudo apt install ./velvet-scroll_*.deb             # Debian / Ubuntu
+sudo dnf install ./velvet-scroll-*.rpm              # Fedora
+sudo pacman -U ./velvet-scroll-*.pkg.tar.zst          # Arch Linux
+```
+
+Use one matching file, not all versions in a downloads folder. CI builds on
+Ubuntu 24.04 (glibc 2.39); older systems may need a local source build. The RPM
+runtime dependencies target Fedora; other RPM distributions may use different
+Qt package names. Packages are not a claim of testing every distribution.
+
+After installation, follow the permission reload and start commands below; no
+reboot is required. Tar archives include their own install/uninstall helpers.
+For development snapshots and version policy, see [releases](releases.md).
+
 ## Arch Linux
 
 Build from source with Arch's packages (including

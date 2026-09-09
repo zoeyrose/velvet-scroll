@@ -2,8 +2,19 @@
 set -eu
 
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$project_dir/Cargo.toml" | head -n 1)
-target_arch=$(rustc -vV | sed -n 's/^host: //p' | cut -d- -f1)
+PACKAGE_VERSION=$("$project_dir/scripts/version.sh")
+export PACKAGE_VERSION
+target_arch=$(uname -m)
+
+if printf '%s\n' "$PACKAGE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+    deb_version=$PACKAGE_VERSION
+elif printf '%s\n' "$PACKAGE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+\.g[0-9a-f]+$'; then
+    deb_version=${PACKAGE_VERSION%%-*}~${PACKAGE_VERSION#*-}
+else
+    echo "unsupported package version: $PACKAGE_VERSION" >&2
+    echo "expected X.Y.Z or X.Y.Z-dev.N.gSHA" >&2
+    exit 1
+fi
 
 case "$target_arch" in
     x86_64) deb_arch=amd64 ;;
@@ -22,7 +33,7 @@ for tool in dpkg-deb dpkg-shlibdeps; do
 done
 
 package_root="$project_dir/dist/deb-root"
-output="$project_dir/dist/velvet-scroll_${version}_${deb_arch}.deb"
+output="$project_dir/dist/velvet-scroll_${deb_version}_${deb_arch}.deb"
 
 case "$package_root" in
     "$project_dir"/dist/*) ;;
@@ -47,10 +58,17 @@ if [ -z "$shlibs_depends" ] || [ "$shlibs_depends" = "$shlibs_output" ]; then
 fi
 
 sed \
-    -e "s/@VERSION@/$version/g" \
+    -e "s/@VERSION@/$deb_version/g" \
     -e "s/@ARCH@/$deb_arch/g" \
     -e "s|@SHLIBS_DEPENDS@|$shlibs_depends|g" \
     "$project_dir/packaging/debian/control.in" >"$package_root/DEBIAN/control"
 
 dpkg-deb --root-owner-group --build "$package_root" "$output"
+
+reported_version=$(dpkg-deb -f "$output" Version)
+reported_arch=$(dpkg-deb -f "$output" Architecture)
+if [ "$reported_version" != "$deb_version" ] || [ "$reported_arch" != "$deb_arch" ]; then
+    echo "unexpected Debian package version or architecture: $reported_version $reported_arch" >&2
+    exit 1
+fi
 echo "Built $output"

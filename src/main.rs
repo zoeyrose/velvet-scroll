@@ -92,7 +92,7 @@ fn run(args: &[String]) -> io::Result<()> {
         return Ok(());
     }
     if args == ["--version"] {
-        println!("velvet-scroll {}", env!("CARGO_PKG_VERSION"));
+        println!("velvet-scroll {}", env!("VELVET_SCROLL_VERSION"));
         return Ok(());
     }
     if args == ["daemon"] {

@@ -13,20 +13,18 @@ docdir := $(datadir)/doc/velvet-scroll
 unitdir := $(PREFIX)/lib/systemd/user
 udevdir ?= /usr/lib/udev/rules.d
 modulesloaddir ?= /etc/modules-load.d
-rust_sources := $(wildcard src/*.rs)
 
 .PHONY: all build release test check install install-udev install-uinput-module
-.PHONY: uninstall uninstall-udev uninstall-uinput-module stage deb clean
+.PHONY: uninstall uninstall-udev uninstall-uinput-module stage
+.PHONY: deb rpm arch archive packages clean
 
 all: build
 
 build:
 	$(CARGO) build
 
-release: target/release/velvet-scroll
-
-target/release/velvet-scroll: Cargo.toml Cargo.lock $(rust_sources)
-	$(CARGO) build --release
+release:
+	$(CARGO) build --release --locked
 
 test:
 	$(CARGO) test
@@ -98,6 +96,18 @@ stage:
 
 deb:
 	./scripts/build-deb.sh
+
+rpm:
+	./scripts/build-rpm.sh
+
+arch:
+	./scripts/build-arch.sh
+
+archive:
+	./scripts/build-archive.sh
+
+packages:
+	./scripts/build-packages.sh
 
 clean:
 	$(CARGO) clean
