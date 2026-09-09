@@ -28,3 +28,8 @@
 - Never publish credentials, personal absolute paths, device serials, input
   captures, or private environment/configuration. Document portable commands and
   actual verification limits instead of copying session logs.
+
+- Website source lives in `site/`; run `npm run site:build` and check desktop and
+  mobile layouts. Keep assets local and the GitHub download fallback usable.
+  Read `docs/website.md` before changing deployment. Cloudflare Pages builds
+  directly from Git; keep its build environments free of application secrets.
