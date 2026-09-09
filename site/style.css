@@ -338,8 +338,7 @@ em {
   border-bottom: 0;
 }
 .feature-mark {
-  font: italic 15px / 1.6 var(--serif);
-  max-width: calc(100% - 16px);
+  font: italic 15px var(--serif);
   color: var(--pink);
   padding-top: 5px;
 }
