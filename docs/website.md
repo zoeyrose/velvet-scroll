@@ -19,9 +19,12 @@ The existing required GitHub CI check also builds the site.
 
 ## Native Cloudflare Pages integration
 
-Connect `zoeyrose/velvet-scroll` through the **Cloudflare Workers & Pages** GitHub
-App. Grant access to this repository in GitHub Settings → Applications →
-Installed GitHub Apps. Create a Pages project using **Connect to Git**, with:
+The `velvet-scroll` Pages project is connected to `zoeyrose/velvet-scroll` through
+the [Cloudflare Workers and Pages GitHub app](https://github.com/apps/cloudflare-workers-and-pages).
+For a fresh setup, grant the app repository access, then complete **Pages →
+Connect to Git → Add account** in Cloudflare to link the GitHub account. Installing
+the app on GitHub alone may leave the Cloudflare account connection incomplete.
+The project uses these settings:
 
 | Setting | Value |
 | --- | --- |
