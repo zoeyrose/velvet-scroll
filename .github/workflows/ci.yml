@@ -1,62 +1,183 @@
-name: CI
+name: Build and release
 
 on:
   push:
+    branches: ['**']
   pull_request:
+  workflow_dispatch:
+    inputs:
+      target_major:
+        description: 'Maintainers only: next major, after committing chore(release): major N. Leave blank for a normal retry.'
+        required: false
+        type: string
+
+# Keep queued builds instead of replacing older pending commits. GitHub permits
+# up to 100 pending runs; do not use cancel-in-progress for package/release work.
+concurrency:
+  group: velvet-scroll-${{ (github.ref == 'refs/heads/main' || endsWith(github.ref, '.x')) && 'stable-releases' || github.ref }}
+  queue: max
 
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+      git_head: ${{ steps.version.outputs.git_head }}
+      branch: ${{ steps.version.outputs.branch }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Authorize explicit maintainer major releases
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node release/major-gate.mjs
+      - name: Plan version for this exact commit
+        id: version
+        env:
+          RELEASE_BRANCH: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+          EVENT_KIND: ${{ github.event_name }}
+        run: node release/ci-plan.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-plan
+          path: release-plan.json
+          if-no-files-found: error
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Install GUI runtime
-        run: sudo apt-get update && sudo apt-get install -y python3-pyqt6
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-      - name: Lint
-        run: cargo clippy --all-targets --all-features -- -D warnings
-      - name: Test Rust
-        run: cargo test --locked --all-targets --all-features
-      - name: Test GUI offscreen
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install test dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-pyqt6 qt6-svg-dev
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - run: ./scripts/test-version.sh
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --all-targets --all-features
+      - name: Test desktop controls against isolated daemon
         env:
           QT_QPA_PLATFORM: offscreen
           VELVET_SCROLL_TEST_BIN: ${{ github.workspace }}/target/debug/velvet-scroll
-        run: python3 -m unittest discover -s ui -p 'test_*.py' -v
-
-  package:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: "1.85"
-      - name: Install package tools
-        run: sudo apt-get update && sudo apt-get install -y dpkg-dev
-      - name: Build Debian package
-        run: make deb
-      - name: Inspect Debian package
-        run: dpkg-deb --info dist/*.deb && dpkg-deb --contents dist/*.deb
-      - uses: actions/upload-artifact@v4
-        with:
-          name: velvet-scroll-deb
-          path: dist/*.deb
-          if-no-files-found: error
+        run: /usr/bin/python3 -m unittest discover -s ui -p 'test_*.py' -v
 
   compatibility:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-unknown-linux-gnu
-      - name: Check ARM64 Linux
-        run: cargo check --locked --target aarch64-unknown-linux-gnu
+      - run: cargo check --locked --target aarch64-unknown-linux-gnu
       - uses: dtolnay/rust-toolchain@1.85.0
-      - name: Check minimum supported Rust
-        run: cargo check --locked
+      - run: cargo check --locked
+
+  packages:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    env:
+      PACKAGE_VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install package tools
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev rpm zstd libarchive-tools
+      - name: Build all package formats at the planned version
+        run: |
+          ./scripts/build-packages.sh
+      - name: Record exact artifact source
+        env:
+          SOURCE_SHA: ${{ needs.plan.outputs.git_head }}
+          SOURCE_ARCH: ${{ matrix.arch }}
+        run: node release/manifest.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.arch }}
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.pkg.tar.zst
+            dist/*.tar.gz
+            dist/manifest-*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  validation:
+    name: Velvet Scroll validation
+    if: always()
+    needs: [plan, test, compatibility, packages]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require all build and test jobs
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          test "$RESULTS" = 'success,success,success,success'
+
+  publish:
+    needs: [plan, test, compatibility, packages]
+    if: needs.plan.outputs.release == 'true' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-plan
+          path: release-input
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: release-assets
+          merge-multiple: true
+      - name: Verify artifacts and publish immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.plan.outputs.git_head }}
+        run: node release/publish.mjs

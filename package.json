@@ -1,0 +1,8 @@
+{
+  "name": "velvet-scroll-release-tools",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22.14.0"},
+  "scripts": {"test": "node --test release/*.test.mjs"},
+  "devDependencies": {"semantic-release": "25.0.9"}
+}

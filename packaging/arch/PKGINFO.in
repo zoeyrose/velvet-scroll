@@ -1,0 +1,14 @@
+pkgname = velvet-scroll
+pkgbase = velvet-scroll
+pkgver = @PKGVER@-@PKGREL@
+pkgdesc = Linux mouse wheel acceleration
+url = https://github.com/zoeyrose/velvet-scroll
+builddate = @BUILDDATE@
+packager = Zoey Rose <zoeyrose@users.noreply.github.com>
+size = @SIZE@
+arch = @ARCH@
+license = MIT
+depend = glibc
+depend = python
+depend = python-pyqt6
+depend = qt6-svg

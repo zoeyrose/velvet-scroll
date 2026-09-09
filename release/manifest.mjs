@@ -1,0 +1,11 @@
+import {readFileSync, readdirSync, writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {join} from 'node:path';
+const version=process.env.PACKAGE_VERSION;
+const sha=process.env.SOURCE_SHA;
+const arch=process.env.SOURCE_ARCH;
+if(!/^[0-9a-f]{40}$/.test(sha)||!['x86_64','aarch64'].includes(arch)) throw new Error('Invalid artifact source metadata');
+const files=readdirSync('dist').filter(f=>/\.(deb|rpm|pkg\.tar\.zst|tar\.gz)$/.test(f));
+if(files.length!==4) throw new Error(`Expected four package formats, found ${files.length}`);
+const artifacts=files.map(name=>({name,sha256:createHash('sha256').update(readFileSync(join('dist',name))).digest('hex')}));
+writeFileSync(`dist/manifest-${arch}.json`,JSON.stringify({version,gitHead:sha,arch,artifacts},null,2)+'\n');

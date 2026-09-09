@@ -139,8 +139,8 @@ software glide, not a physical free-spinning wheel.
   ordinary mouse path. Composite mice may expose keyboard capabilities on the
   same node; those capabilities must be preserved with the mouse.
 - **A standalone Flatpak or AppImage does not solve device permissions.** Use the
-  native host install; the repo includes staged installation and a Debian package
-  builder. Build locally for your distro's libc, or package on your oldest target.
+  native host install; CI builds Debian, RPM, Arch and tar packages. Build locally
+  for your distro's libc, or package on your oldest target.
 
 See [installation and troubleshooting](docs/installation.md) and the
 [validation checklist](docs/validation.md).
@@ -157,7 +157,8 @@ make deb                         # Debian-family package tools required
 
 Tests use temporary configuration and do not select a physical mouse. Daemon
 integration tests require permission to create local Unix sockets. CI also builds
-and inspects the Debian package. No benchmark or desktop compatibility claim
+packages for x86_64 and aarch64. See the [release and maintenance guide](docs/releases.md)
+for downloads and version policy. No benchmark or desktop compatibility claim
 should be inferred from unit tests alone.
 
 Contributions are welcome. Please report your desktop/session type, distro,
