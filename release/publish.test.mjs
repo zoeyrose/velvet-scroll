@@ -62,13 +62,19 @@ function github(f, options = {}) {
       }
       if (path.includes('/git/tags/')) return response(options.annotated);
       if (path.endsWith('/releases/latest')) return options.latest ? response(options.latest) : absent();
-      if (path.includes('/releases/tags/')) return release ? response(release) : absent();
+      if (path.includes('/releases/tags/')) return release && !release.draft ? response(release) : absent();
+      if (path.endsWith('/releases')) {
+        if (args.includes('POST')) {
+          assert.ok(args.includes('draft=true'));
+          assert.ok(args.includes('prerelease=false'));
+          release = {id: 42, tag_name: f.plan.gitTag, draft: true, prerelease: false};
+          return response(release);
+        }
+        return response([[{id: 1, tag_name: 'v0.1.0', draft: false, prerelease: false}], release ? [release] : []]);
+      }
+      if (/\/releases\/\d+$/.test(path)) return release ? response(release) : absent();
       if (/\/releases\/\d+\/assets$/.test(path)) return response([assets.slice(0, 5), assets.slice(5)]);
       if (path.includes('/releases/assets/')) return bodies.get(Number(path.split('/').at(-1)));
-    }
-    if (args[0] === 'release' && args[1] === 'create') {
-      release = {id: 42, tag_name: f.plan.gitTag, draft: true, prerelease: false};
-      return Buffer.from('');
     }
     if (args[0] === 'release' && args[1] === 'upload') {
       assert.equal(release.draft, true);
@@ -256,4 +262,50 @@ test('downloaded public assets are hashed when the API has no digest', (t) => {
   mock.setAssets(assets);
   assert.throws(() => invoke(f, mock), /checksum mismatch/);
   assert.equal(mock.calls.filter((args) => args[0] === 'release').length, 0);
+});
+
+test('recovers an existing draft from a later listing page when the tag endpoint returns 404', (t) => {
+  const f = fixture(t);
+  const draft = {...published(f), draft: true};
+  const mock = github(f, {tag: immutableTag(f), release: draft});
+  assert.equal(invoke(f, mock).published, true);
+  assert.ok(mock.calls.some((args) => args[1]?.endsWith('/releases') && args.includes('--paginate') && args.includes('--slurp')));
+  assert.equal(mock.calls.some((args) => args.includes('POST')), false, 'existing draft and tag must be reused');
+  assert.equal(mock.calls.filter((args) => args[1]?.includes('/releases/tags/')).length, 1);
+  assert.equal(mock.calls.filter((args) => args[1]?.endsWith('/releases/42')).length, 3);
+});
+
+test('new drafts retain the create response ID and do not require the tag endpoint to expose them', (t) => {
+  const f = fixture(t);
+  const mock = github(f);
+  assert.equal(invoke(f, mock).published, true);
+  const create = mock.calls.filter((args) => args[1]?.endsWith('/releases') && args.includes('POST'));
+  assert.equal(create.length, 1);
+  assert.ok(create[0].includes(`target_commitish=${f.plan.gitHead}`));
+  assert.ok(create[0].includes(`tag_name=${f.plan.gitTag}`));
+  assert.equal(mock.calls.filter((args) => args[1]?.includes('/releases/tags/')).length, 1);
+  assert.equal(mock.calls.filter((args) => args[1]?.endsWith('/releases/42')).length, 3);
+});
+
+test('release refreshes reject a different ID before uploading assets', (t) => {
+  const f = fixture(t);
+  const mock = github(f, {intercept: (args, state) => {
+    if (args[1]?.endsWith('/releases/42')) return Buffer.from(JSON.stringify({...state.release, id: 99}));
+  }});
+  assert.throws(() => invoke(f, mock), /Invalid stable GitHub release response/);
+  assert.equal(mock.calls.some((args) => args[0] === 'release'), false);
+});
+
+test('ambiguous or malformed fallback listings fail before creating or uploading a release', async (t) => {
+  for (const malformed of [false, true]) await t.test(String(malformed), (t) => {
+    const f = fixture(t);
+    const draft = {...published(f), draft: true};
+    const mock = github(f, {tag: immutableTag(f), intercept: (args) => {
+      if (args[1]?.endsWith('/releases')) {
+        return Buffer.from(JSON.stringify(malformed ? [draft] : [[draft], [{...draft, id: 99}]]));
+      }
+    }});
+    assert.throws(() => invoke(f, mock), malformed ? /Invalid GitHub release listing/ : /Multiple GitHub releases/);
+    assert.equal(mock.calls.some((args) => args.includes('POST') || args[0] === 'release'), false);
+  });
 });
