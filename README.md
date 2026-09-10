@@ -15,6 +15,9 @@ evdev/uinput, so it is designed for KDE Plasma, GNOME and other desktops on both
 Wayland and X11. Desktop and hardware acceptance testing is still needed; this
 is not a claim that every distro, mouse or application has been tested.
 
+Created by **[Zoey Rose](https://zoeysr.com/)**.
+Visit **[velvet-scroll.com](https://velvet-scroll.com/)** for downloads and an overview.
+
 ## What it does
 
 - Keeps slow scrolling at its original distance; acceleration ramps up to a

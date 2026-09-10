@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" itemscope itemtype="https://schema.org/SoftwareApplication">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,11 +8,19 @@
       name="description"
       content="A softer way to scroll. Velvet Scroll adds mouse-wheel acceleration to Linux, with precise small movements, faster flicks and one easy toggle."
     />
+    <meta name="author" content="Zoey Rose" />
+    <meta itemprop="name" content="Velvet Scroll" />
+    <meta itemprop="operatingSystem" content="Linux" />
+    <meta itemprop="applicationCategory" content="UtilitiesApplication" />
+    <meta itemprop="isAccessibleForFree" content="true" />
+    <link rel="author" href="https://zoeysr.com/" />
     <link rel="canonical" href="https://velvet-scroll.com/" />
+    <link itemprop="url" href="https://velvet-scroll.com/" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Velvet Scroll" />
     <meta
       property="og:title"
-      content="Velvet Scroll — a softer way to scroll"
+      content="Velvet Scroll — Mouse-wheel acceleration for Linux"
     />
     <meta
       property="og:description"
@@ -23,8 +31,16 @@
       property="og:image"
       content="https://velvet-scroll.com/assets/app.png"
     />
+    <meta
+      property="og:image:alt"
+      content="Velvet Scroll settings with acceleration, coasting and per-mouse controls"
+    />
     <meta name="twitter:card" content="summary" />
-    <title>Velvet Scroll — a softer way to scroll</title>
+    <meta
+      name="twitter:image:alt"
+      content="Velvet Scroll settings with acceleration, coasting and per-mouse controls"
+    />
+    <title>Velvet Scroll — Mouse-wheel acceleration for Linux</title>
     <link rel="icon" href="/assets/velvet-scroll.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
     <script src="/site.js" defer></script>
@@ -60,7 +76,7 @@
             Keep the little movements precise.<br />Let the big flicks take you
             further.
           </p>
-          <p class="hero-description">
+          <p class="hero-description" itemprop="description">
             Mouse-wheel acceleration for Linux, with a gentle touch and one easy
             toggle. Small enough to stay out of your way.
           </p>
@@ -313,12 +329,18 @@
         >Velvet Scroll <span class="star" aria-hidden="true">✧</span></a
       >
       <p>
-        A little desktop comfort, made by
-        <a href="https://zoeysr.com">Zoey Rose</a>.
+        Created by
+        <span itemprop="creator" itemscope itemtype="https://schema.org/Person">
+          <a itemprop="url" rel="author" href="https://zoeysr.com/">
+            <span itemprop="name">Zoey Rose</span></a
+          ></span
+        >. A little desktop comfort.
       </p>
       <div>
         <a href="https://github.com/zoeyrose/velvet-scroll">Source</a
-        ><a href="https://github.com/zoeyrose/velvet-scroll/blob/main/LICENSE"
+        ><a
+          itemprop="license"
+          href="https://github.com/zoeyrose/velvet-scroll/blob/main/LICENSE"
           >MIT license</a
         >
       </div>
