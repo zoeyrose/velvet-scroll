@@ -81,3 +81,34 @@ Preserve query string enabled. Without it, both domains serve the same site.
 References: [GitHub integration](https://developers.cloudflare.com/pages/configuration/git-integration/github-integration/),
 [build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/),
 and [preview deployments](https://developers.cloudflare.com/pages/configuration/preview-deployments/).
+
+
+## Search discovery
+
+The production home page uses a descriptive title, canonical `.com` URL, social
+sharing metadata and Schema.org microdata for the Linux app and its creator.
+Microdata stays in the static HTML and needs no scripts or CSP exceptions.
+It describes the app; it does not promise rich results or add invented ratings.
+The sitemap lists the canonical home page and is advertised in `robots.txt`.
+Do not add release tags or change dates to metadata unless they remain accurate.
+
+After merging website changes:
+
+1. Verify `velvet-scroll.com` in [Google Search Console](https://search.google.com/search-console/).
+   Submit `https://velvet-scroll.com/sitemap.xml`, then inspect the home page and
+   request indexing. Domain verification may require a DNS TXT record supplied
+   by Google; keep verification values out of issue and PR discussions.
+2. Add the site to [Bing Webmaster Tools](https://www.bing.com/webmasters/) and
+   submit the same sitemap.
+3. Link to the canonical site from the creator's projects page and relevant
+   project listings. Publish useful release notes and accurate installation and
+   compatibility information; avoid bulk link submissions or keyword stuffing.
+4. Check production returns HTTP 200 without `noindex`, while Pages previews
+   retain their `noindex` header. Keep `.com` as the canonical URL on both domains.
+   The optional `.org` redirect is described above.
+
+Search Console submission requires the owner's account and is separate from
+merging this repository. Crawling and indexing can take time and are not
+guaranteed by submission. See Google's
+[indexing request guidance](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)
+and [sitemap guidance](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap).
